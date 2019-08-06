@@ -1,0 +1,68 @@
+#!/bin/sh
+
+CURDIR=`pwd`
+REPORTS='reports'
+TEST='test_'
+BIN='bin'
+CODECOVERAGE=$REPORTS/'coverage'
+GEN_REPORT=0
+TARGET="hashtable_utest"
+
+removeFolder() {
+    if [ -d "$1" ]; then
+        echo "Remove folder $1"
+        rm -rf $1
+    fi
+}
+
+printUsage() {
+    echo "Usage : execTest [gen-report]"
+    exit 0
+}
+
+if [ "$1" = '--help' ] || [ "$1" = '-h' ]; then
+    printUsage
+fi
+
+if [ "$#" -gt 0 ]; then
+    if [ "$1" = "gen-report" ]; then
+        GEN_REPORT=1
+    else 
+        GEN_REPORT=0
+    fi
+fi
+
+if [ ! -d "$BIN" ] || [ ! -f "$BIN/$TARGET" ]; then
+    echo "No bin found. Please run build first"
+    exit 1
+fi
+
+ulimit -c unlimited
+if [ $GEN_REPORT = 0 ]; then     
+    ${BIN}/${TARGET}
+    exit $?
+fi
+
+if [ ! -d "$REPORTS" ]; then
+  echo "Create folder $REPORTS"
+  mkdir $REPORTS
+fi
+
+if [ ! -d "$CODECOVERAGE" ]; then
+  echo "Create folder $CODECOVERAGE"
+  mkdir $CODECOVERAGE
+fi
+
+ulimit -c unlimited
+${BIN}/${TARGET} --gtest_output="xml:./${CODECOVERAGE}/report.xml"
+
+if [ $? -ne 0 ]; then
+     echo "Test Failed"
+fi
+
+if [ -d "./utest/CMakeFiles/${TARGET}.dir" ]; then
+    lcov --directory ./utest/CMakeFiles/${TARGET}.dir --capture --output-file ./${CODECOVERAGE}/code_coverage.info -rc lcov_branch_coverage=1
+    lcov --remove ./${CODECOVERAGE}/code_coverage.info '/usr/include/*' '/usr/local/*' -o ./${CODECOVERAGE}/code_coverage.info -rc lcov_branch_coverage=1
+fi
+
+genhtml ./${CODECOVERAGE}/code_coverage.info --branch-coverage --output-directory ./${CODECOVERAGE}  --rc genhtml_branch_coverage=1

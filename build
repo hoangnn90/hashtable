@@ -1,0 +1,47 @@
+#!/bin/sh
+BINDIR='bin'
+REPORTS='reports'
+DEBUG=""
+TARGET="hashtable_utest"
+
+removeFolder() {
+    if [ -d "$1" ]; then
+        echo "Remove folder $1"
+        sudo rm -rf $1
+    fi
+}
+
+removeCMakeFiles() {
+    if [ -d 'CMakeFiles' ]; then
+        echo "Remove folder CMakeFiles"
+        rm -rf 'CMakeFiles'
+    fi
+
+    rm cmake_install.cmake
+    rm CMakeCache.txt
+    rm Makefile
+    rm install_manifest.txt
+}
+
+if [ "$1" = 'clean' ]; then
+    echo "Cleanup..."
+    removeCMakeFiles
+    cd ./src/
+    removeCMakeFiles
+    cd ../utest/
+    removeCMakeFiles
+    cd ..
+    removeFolder $BINDIR
+    removeFolder $REPORTS
+
+    rm -rf core
+    exit 0
+fi
+
+if [ "$1" = 'DEBUG' ]; then
+    DEBUG="-DCMAKE_BUILD_TYPE=Debug"
+fi
+
+cmake $DEBUG .
+
+make
